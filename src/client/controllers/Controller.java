@@ -1,11 +1,10 @@
-package sample;
+package client.controllers;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import client.models.Network;
 
 public class Controller {
 
@@ -18,16 +17,20 @@ public class Controller {
     @FXML
     private TextField inputField;
 
-    //создаем переменную с нашим именем/ником.
-    public String username = "Дмитрий";
+    public Network network;
+
+    public void setNetwork(Network network) {
+        this.network = network;
+    }
 
     private final ObservableList<String> msgList = FXCollections.observableArrayList("Добро пожаловать в чат!");
 
-    private final ObservableList<String> prsnList = FXCollections.observableArrayList(username + " (Я)");
+    private final ObservableList<String> prsnList = FXCollections.observableArrayList(network.USERNAME + " (Я)");
 
     @FXML
     void initialize() {
         listViewMsg.setItems(msgList);
+
         listViewPerson.setItems(prsnList);
         //реализация переноса строки внутри ячейки. решение взято с просторов Интернета
         listViewMsg.setCellFactory(param -> new ListCell<>() {
@@ -50,20 +53,16 @@ public class Controller {
 
     @FXML
     void sendMsg() {
-        String message = inputField.getText().trim();
-        if (message.length() != 0) {
-            sendMessageToList(message);
+        if (!inputField.getText().isBlank()) {
+            network.sendMessage(inputField.getText().trim());
+            inputField.clear();
         } else {
             showAlertEmptyInput();
         }
-        inputField.clear();
         inputField.requestFocus();
     }
 
-    private void sendMessageToList(String message) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
-        //создаем строку из текущей даты по заданному формату, имени пользователя и текста сообщения
-        message = dateFormat.format(new Date()) + " " + username + ": " + message;
+    public void sendMessageToList(String message) {
         listViewMsg.getItems().add(message);
     }
 
@@ -78,7 +77,7 @@ public class Controller {
     void showAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("О программе");
-        alert.setHeaderText("Пользовательский чат v.01b");
+        alert.setHeaderText("Пользовательский чат v.0.2b");
         alert.setContentText("Пользовательский текстовый чат");
         alert.show();
     }
