@@ -2,6 +2,7 @@ package server.chat.handler;
 
 import server.chat.MyServer;
 import server.chat.auth.AuthService;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -23,6 +24,7 @@ public class ClientHandler {
     private static final String PRIVATE_MSG_CMD_PREFIX = "/w"; //recipient + msg
     private static final String SERVER_MSG_CMD_PREFIX = "/serverMsg"; // + msg
     private static final String END_CMD_PREFIX = "/end"; //
+    private static final String USER_LIST_CMD = "/usrlst";
     private String username;
 
     public ClientHandler(MyServer myServer, Socket socket) {
@@ -39,7 +41,6 @@ public class ClientHandler {
                 authentication();
                 readMessage();
             } catch (IOException e) {
-                System.out.println(username + " отключился");
                 myServer.unsubscribe(this);
             }
         }).start();
@@ -60,7 +61,6 @@ public class ClientHandler {
                     myServer.broadcastMessage(this, division[0], division[1]); //передаем адресата и сообщение
                 } catch (ArrayIndexOutOfBoundsException e) {
                     System.out.println("Недопустимый формат сообщения");
-                    ;
                 }
             }
         }
@@ -68,8 +68,7 @@ public class ClientHandler {
 
     private void authentication() throws IOException {
         while (true) {
-            String message = "/auth frodo 111";
-            //String message = in.readUTF();
+            String message = in.readUTF();
             if (message.startsWith(AUTH_CMD_PREFIX)) {
                 boolean isAuthSuccess = processAuthCommand(message);
                 if (isAuthSuccess)
@@ -78,7 +77,6 @@ public class ClientHandler {
                 out.writeUTF(AUTHERR_CMD_PREFIX + "Ошибка авторизации!");
             }
         }
-
     }
 
     private boolean processAuthCommand(String message) throws IOException {
@@ -93,10 +91,11 @@ public class ClientHandler {
             if (myServer.isUsernameBusy(username)) {
                 out.writeUTF(AUTHERR_CMD_PREFIX + " Пользователь с таким именем уже подключен");
                 return false;
+            } else {
+                out.writeUTF(String.format("%s %s", AUTHOK_CMD_PREFIX, username));
+                myServer.subscribe(this);
+                return true;
             }
-            out.writeUTF(AUTHOK_CMD_PREFIX + " " + username);
-            myServer.subscribe(this);
-            return true;
         } else {
             out.writeUTF(AUTHERR_CMD_PREFIX + " Неверные логин или пароль!");
             return false;
@@ -104,7 +103,7 @@ public class ClientHandler {
     }
 
     public void sendServerMessage(String message) throws IOException {
-        out.writeUTF(String.format("%s %s %s", SERVER_MSG_CMD_PREFIX, dateFormat.format(new Date()), message));
+        out.writeUTF(String.format("%s %s", SERVER_MSG_CMD_PREFIX, message));
     }
 
     public void sendMessage(String message) throws IOException {
@@ -131,4 +130,11 @@ public class ClientHandler {
         return username;
     }
 
+    public void sendUserList(String userList) throws IOException {
+        out.writeUTF(String.format("%s %s", USER_LIST_CMD, userList));
+    }
+
+    public void sendStopServerMessage() throws IOException {
+        out.writeUTF(END_CMD_PREFIX);
+    }
 }

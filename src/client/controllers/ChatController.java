@@ -6,7 +6,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import client.models.Network;
 
-public class Controller {
+public class ChatController {
 
     @FXML
     private ListView<String> listViewPerson;
@@ -25,7 +25,7 @@ public class Controller {
 
     private final ObservableList<String> msgList = FXCollections.observableArrayList("Добро пожаловать в чат!");
 
-    private final ObservableList<String> prsnList = FXCollections.observableArrayList(network.USERNAME + " (Я)");
+    private ObservableList<String> prsnList = FXCollections.observableArrayList();
 
     @FXML
     void initialize() {
@@ -54,30 +54,33 @@ public class Controller {
     @FXML
     void sendMsg() {
         if (!inputField.getText().isBlank()) {
-            network.sendMessage(inputField.getText().trim());
+            if (inputField.getText().startsWith(Network.PRIVATE_MSG_CMD_PREFIX)) {
+                network.sendPrivateMessage(inputField.getText().trim());
+            } else {
+                network.sendMessage(inputField.getText().trim());
+            }
             inputField.clear();
         } else {
-            showAlertEmptyInput();
+            return;
         }
         inputField.requestFocus();
     }
 
-    public void sendMessageToList(String message) {
-        listViewMsg.getItems().add(message);
-    }
-
-    private void showAlertEmptyInput() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Ошибка ввода");
-        alert.setHeaderText("Введена пустая строка");
-        alert.show();
+    //Для отправки личных сообщений по нажатию на ник в ListViewPerson просто в строку ввода добавляем префикс и username адресата
+    @FXML
+    void sendPrivateMessage(){
+        String recipient = listViewPerson.getSelectionModel().getSelectedItem();
+        if (!recipient.equals(network.getUsername())) {
+            inputField.setText(String.format("%s %s ", Network.PRIVATE_MSG_CMD_PREFIX, recipient));
+            inputField.requestFocus();
+        }
     }
 
     @FXML
     void showAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("О программе");
-        alert.setHeaderText("Пользовательский чат v.0.2b");
+        alert.setHeaderText("Пользовательский чат v.0.3b");
         alert.setContentText("Пользовательский текстовый чат");
         alert.show();
     }
@@ -88,4 +91,16 @@ public class Controller {
     }
 
 
+    public void sendMessageToList(String message) {
+        listViewMsg.getItems().add(message);
+    }
+
+    public void addClientToList(String username) {
+        listViewPerson.getItems().add(username);
+        listViewPerson.getItems().sort(null);
+    }
+
+    public void resetUserList() {
+        listViewPerson.getItems().clear();
+    }
 }

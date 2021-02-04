@@ -45,14 +45,19 @@ public class MyServer {
         return authService;
     }
 
-    public synchronized void subscribe(ClientHandler clientHandler) {
+    public synchronized void subscribe(ClientHandler clientHandler) throws IOException {
         clients.add(clientHandler);
+        broadcastUserList();
         broadcastServerMessage(clientHandler, "SUB");
-        System.out.println(clientHandler.getUsername() + " присоединился к серверу");
     }
 
     public synchronized void unsubscribe(ClientHandler clientHandler) {
         clients.remove(clientHandler);
+        try {
+            broadcastUserList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         broadcastServerMessage(clientHandler, "UNSUB");
     }
 
@@ -65,16 +70,17 @@ public class MyServer {
         return false;
     }
 
-
     public synchronized void broadcastServerMessage(ClientHandler user, String flag) {
         for (ClientHandler client : clients) {
-            try {
-                switch (flag) {
-                    case "SUB" -> client.sendServerMessage(user.getUsername() + "подключился к чату");
-                    case "UNSUB" -> client.sendServerMessage(user.getUsername() + "покинул чат");
+            if (user != client) {
+                try {
+                    switch (flag) {
+                        case "SUB" -> client.sendServerMessage(user.getUsername() + " подключился к чату");
+                        case "UNSUB" -> client.sendServerMessage(user.getUsername() + " покинул чат");
+                    }
+                } catch (IOException e) {
+                    System.out.println("Ошибка рассылки серверных сообщений");
                 }
-            } catch (IOException e) {
-                System.out.println("Ошибка рассылки серверных сообщений");
             }
         }
     }
@@ -104,8 +110,20 @@ public class MyServer {
             sender.sendPrivateMessage();
     }
 
-    public void stop() {
+    public synchronized void broadcastUserList() throws IOException {
+        StringBuilder userList = new StringBuilder(" ");
+        for (ClientHandler client : clients) {
+            userList.append(client.getUsername()).append(" ");
+        }
+        for (ClientHandler client : clients) {
+            client.sendUserList(userList.toString());
+        }
+    }
 
+    public void stop() throws IOException {
+        for (ClientHandler client : clients) {
+            client.sendStopServerMessage();
+        }
         System.exit(0);
     }
 }
